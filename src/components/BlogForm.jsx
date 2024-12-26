@@ -1,15 +1,21 @@
 import { useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { create } from '../reducers/blogReducer'
 
 const BlogForm = ({ createBlog }) => {
-    const [newBlog, setNewBlog] = useState({ title: '', author: '', likes: 0 })
+    const dispatch = useDispatch()
 
     const addBlog = (event) => {
         event.preventDefault()
-        createBlog({
+        /*createBlog({
             title: newBlog.title,
             author: newBlog.author
-        })
-        setNewBlog({ title: '', author: '', likes: 0 })
+        })*/
+        const title = event.target.title.value
+        event.target.title.value = ''
+        const author = event.target.author.value
+        event.target.author.value = ''
+        dispatch(create(title, author))
     }
 
     return (
@@ -20,14 +26,12 @@ const BlogForm = ({ createBlog }) => {
                 <input
                     data-testid='title'
                     placeholder="Type title..."
-                    value={newBlog.title}
-                    onChange={event => setNewBlog({ ...newBlog, title: event.target.value })}
+                    name="title"
                 />
                 <input
                     data-testid='author'
                     placeholder="Type author..."
-                    value={newBlog.author}
-                    onChange={event => setNewBlog({ ...newBlog, author: event.target.value })}
+                    name="author"
                 />
                 <button type="submit">save</button>
             </form>

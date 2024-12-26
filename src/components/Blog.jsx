@@ -1,34 +1,26 @@
 import { useState, useEffect } from 'react'
 import blogService from '../services/blogs'
+import { useDispatch, useSelector } from 'react-redux'
+import { like, removeBlog } from '../reducers/blogReducer'
 
-const Blog = ({ blog, currentUser, removeBlog }) => {
+const Blog = ({ blog, currentUser }) => {
     const [details, setDetails] = useState(false)
-    const [likes, setLikes] = useState(blog.likes || 0)
+    const dispatch = useDispatch()
+    const updatedBlog = useSelector(state => state.blogs.find(b => b.id === blog.id))
+    const likes = updatedBlog ? updatedBlog.likes : blog.likes
 
-    useEffect(() => {
+
+    /*useEffect(() => {
       console.log('Current user: ', currentUser)
       console.log('blog: ', blog)
-  }, [])
-
-    useEffect(() => {
-      setLikes(blog.likes || 0)
-  }, [blog])
+  }, [])*/
 
     function handleLikeIncrease() {
-        const updatedLikes = likes + 1;
-
-        blogService.update(blog.id, {
-            user: blog.user.id,
-            likes: updatedLikes,
-            author: blog.author,
-            title: blog.title
-        }).then((returnedBlog) => {
-          console.log(returnedBlog);
-          setLikes(returnedBlog.likes)})
+        dispatch(like(blog.id))
     }
 
     function handleDelete() {
-        blogService.remove(blog.id).then(() => removeBlog(blog.id))
+        dispatch(removeBlog(blog.id))
     }
 
     return (
