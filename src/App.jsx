@@ -1,13 +1,24 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useReducer } from 'react'
 import Blog from './components/Blog'
 import blogService from './services/blogs'
 import loginService from './services/login'
 import Togglable from './components/Togglable'
 import LoginForm from './components/LoginForm'
 import BlogForm from './components/BlogForm'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import Notification from './components/Notification'
+import Context from "./Context.js"
+
+const notificationReducer = (state, action) => {
+    switch (action.type) {
+      case "CREATED":
+          return `${action.payload} was created.`
+      default:
+          return state
+    }
+  }
 
 const App = () => {
-    const [blogs, setBlogs] = useState([])
     const [details, setDetails] = useState(false)
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
@@ -17,46 +28,40 @@ const App = () => {
     const [loginVisible, setLoginVisible] = useState(false)
     const blogFormRef = useRef()
 
-    useEffect(() => {
-        blogService.getAll().then(blogs => {
-            const sortedBlogs = blogs.sort((a, b) => b.likes - a.likes)
-            setBlogs( sortedBlogs )
+    const [notification, notificationDispatch] = useReducer(notificationReducer, null)
+    const queryClient = useQueryClient()
+
+    const result = useQuery({
+        queryKey: ['blogs'],
+        queryFn: blogService.getAll
+      })
+    
+    //const blogs = result.data
+    //console.log(JSON.parse(JSON.stringify(result)))
+    const { data: blogs, isLoading, isError, isSuccess, error } = result
+    
+    const newBlogMutation = useMutation({ 
+        mutationFn: blogService.create,
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['blogs'] }),
+            notificationDispatch({type: 'CREATED', payload: variables.title})
         }
-        )
-    }, [])
+    })
 
-    useEffect(() => {
-        const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
-        if (loggedUserJSON) {
-            const user = JSON.parse(loggedUserJSON)
-            setUser(user)
-            blogService.setToken(user.token)
+    const updateBlogMutation = useMutation({
+        mutationFn: ({ id, updatedBlog }) => blogService.update(id, updatedBlog),
+        onSuccess: (data, variables) => {
+          queryClient.invalidateQueries({ queryKey: ['blogs'] })
+        },
+        onError: (error) => {
+            console.error('Error updating likes:', error)
         }
-    }, [])
+      })
 
-    const addBlog = (blogObject) => {
-        blogFormRef.current.toggleVisibility()
-
-        blogService
-            .create(blogObject)
-            .then(returnedBlog => {
-                setBlogs(blogs.concat(returnedBlog))
-            })
-        setSuccessMessage('Blog added successfully')
-        setTimeout(() => {
-            setSuccessMessage(null)
-        }, 5000)
-    }
-
-    const handleLogin = async (event) => {
-        event.preventDefault()
-
-        try {
-            const user = await loginService.login({
-                username, password,
-            })
-
-
+      const deleteBlogMutation = useMutation({ 
+        mutationFn: (id) => blogService.remove(id),
+        onSuccess: (user) => {
+            console.log(user)
             window.localStorage.setItem(
                 'loggedBlogappUser', JSON.stringify(user)
             )
@@ -67,6 +72,83 @@ const App = () => {
             setUser(user)
             setUsername('')
             setPassword('')
+        }
+    })
+
+    const loginUserMutation = useMutation({
+        mutationFn: ({username, password}) => loginService.login({username, password}),
+        onSuccess: (user) => {
+            window.localStorage.setItem(
+                'loggedBlogappUser', JSON.stringify(user)
+            )
+
+
+            blogService.setToken(user.token)
+
+            setUser(user)
+            setUsername('')
+            setPassword('')
+        },
+        onError: (error) => {
+            console.error('Error logging in:', error)
+        }
+    })
+
+    /*useEffect(() => {
+        blogService.getAll().then(blogs => {
+            const sortedBlogs = blogs.sort((a, b) => b.likes - a.likes)
+            setBlogs( sortedBlogs )
+        }
+        )
+    }, [])*/
+
+    useEffect(() => {
+        const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
+        try {
+            const user = JSON.parse(loggedUserJSON)
+            setUser(user)
+            blogService.setToken(user.token)
+        } catch (error) {
+            console.error("Error parsing user from localStorage:", error)
+        }
+    }, [])
+
+    const addBlog = (blogObject) => {
+        /*blogFormRef.current.toggleVisibility()
+
+        blogService
+            .create(blogObject)
+            .then(returnedBlog => {
+                setBlogs(blogs.concat(returnedBlog))
+            })
+        setSuccessMessage('Blog added successfully')
+        setTimeout(() => {
+            setSuccessMessage(null)
+        }, 5000)*/
+        newBlogMutation.mutate(blogObject)
+    }
+
+    const handleLogin = async (event) => {
+        event.preventDefault()
+
+        try {
+            /*const user = await loginService.login({
+                username, password,
+            })*/
+
+            loginUserMutation.mutate({username, password})
+
+
+            /*window.localStorage.setItem(
+                'loggedBlogappUser', JSON.stringify(user)
+            )
+
+
+            blogService.setToken(user.token)
+
+            setUser(user)
+            setUsername('')
+            setPassword('')*/
         } catch (exception) {
             setErrorMessage('Wrong credentials')
             setTimeout(() => {
@@ -100,6 +182,8 @@ const App = () => {
 
 
     return (
+        <>
+        <Context.Provider value={{updateBlogMutation, deleteBlogMutation}}>
         <div>
             <h2>blogs</h2>
 
@@ -121,13 +205,15 @@ const App = () => {
                     <Togglable buttonLabel='create' ref={blogFormRef}>
                         <BlogForm createBlog={addBlog} />
                     </Togglable>
-                    {successMessage && successMessage}
-                    {blogs.map(blog =>
+                    <Notification text={notification} />
+                    {isSuccess && blogs.map(blog =>
                         <Blog key={blog.id} blog={blog} currentUser={user} removeBlog={handleRemoveBlog}/>
                     )}
                 </div>
             }
         </div>
+        </Context.Provider>
+        </>
     )
 }
 
