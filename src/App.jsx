@@ -9,7 +9,11 @@ import LoginForm from './components/LoginForm'
 import BlogForm from './components/BlogForm'
 import Notification from "./components/Notification"
 import { initializeBlogs } from './reducers/blogReducer'
-import { initializeUser, login, logout } from './reducers/userReducer'
+import { initializeUser, login, logout, allUsers } from './reducers/userReducer'
+import store from "./store.js"
+import {Link} from "react-router-dom"
+import { Table } from 'react-bootstrap'
+import { Navbar, Nav } from 'react-bootstrap'
 
 const App = () => {
     const [blogs, setBlogs] = useState([])
@@ -20,7 +24,8 @@ const App = () => {
     const blogFormRef = useRef()
     const dispatch = useDispatch()
     const allBlogs = useSelector(state => state.blogs)
-    const user = useSelector(state => state.user)
+    const users = useSelector(state => state.root.users)
+    const user = useSelector(state => state.root.user)
 
     useEffect(() => {
         dispatch(initializeBlogs())
@@ -29,6 +34,15 @@ const App = () => {
     useEffect(() => {
         dispatch(initializeUser())
     }, [])
+
+    useEffect(() => {
+        dispatch(allUsers())
+    }, [])
+
+    /*useEffect(() => {
+        console.log('Updated users:', users)
+        console.log('Full Redux state:', store.getState())
+    }, [allBlogs])*/
 
     const addBlog = (blogObject) => {
         blogFormRef.current.toggleVisibility()
@@ -65,12 +79,27 @@ const App = () => {
 
 
     return (
-        <div>
+        <div className="container">
+            <Navbar collapseOnSelect expand="lg" bg="dark" variant="dark">
+            <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+            <Navbar.Collapse id="responsive-navbar-nav">
+                <Nav className="me-auto">
+                <ul style={{listStyleType: 'none', display: 'flex', gap: '10px'}}>
+                <Nav.Link href="#" as="span">
+                    <li><Link to="/">blogs</Link></li>
+                </Nav.Link>
+                <Nav.Link href="#" as="span">
+                    <li><Link to="/users">users</Link></li>
+                </Nav.Link>
+                </ul>
+                </Nav>
+            </Navbar.Collapse>
+            </Navbar>
             <h2>blogs</h2>
 
             {user === null ?
                 (
-                    <Togglable buttonLabel='login'>
+                    <Togglable style={{marginBottom: '5px'}}buttonLabel='login'>
                         <LoginForm
                             username={username}
                             password={password}
@@ -82,16 +111,25 @@ const App = () => {
                 ) :
                 <div className="blog-list">
                     <p>{user.username} logged-in</p>
-                    <button onClick={handleLogOut}>Log out</button>
+                    <button style={{marginBottom: '5px'}} onClick={handleLogOut}>Log out</button>
                     <Togglable buttonLabel='create' ref={blogFormRef}>
                         <BlogForm createBlog={addBlog} />
                     </Togglable>
                     <Notification />
-                    {[...allBlogs].sort((a, b) => b.likes - a.likes).map(blog =>
-                        <Blog key={blog.id} blog={blog} currentUser={user} removeBlog={handleRemoveBlog}/>
+                    <Table striped>
+                        <tbody>
+                    {allBlogs && [...allBlogs].sort((a, b) => b.likes - a.likes).map(blog =>
+                        <tr key={blog.id}><td><Blog key={blog.id} blog={blog} currentUser={user} removeBlog={handleRemoveBlog} /></td></tr>
                     )}
+                    </tbody>
+                    </Table>
                 </div>
             }
+
+            {/*<h2>Users</h2>
+            {users && [...users].map(user => (
+                <p key={user.id}><Link to={`/${user.id}`} state={ user.blogs }>{user.username}</Link> has {user.blogs.length} blogs created</p>
+            ))}*/}
         </div>
     )
 }

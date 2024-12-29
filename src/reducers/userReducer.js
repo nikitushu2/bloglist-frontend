@@ -1,10 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit'
 import blogService from "../services/blogs.js"
 import loginService from "../services/login.js"
+import { combineReducers } from 'redux'
 
 const userSlice = createSlice({
     name: 'user',
-    initialState: null,
+    initialState: [],
     reducers: {
         set(state, action) {
             return action.payload
@@ -15,7 +16,30 @@ const userSlice = createSlice({
     }
 })
 
+const usersSlice = createSlice({
+    name: 'users',
+    initialState: null,
+    reducers: {
+        getUsers(state, action) {
+            return state
+        },
+        setUsers(state, action) {
+            return action.payload
+        },
+    }
+})
+
 export const { set, clear } = userSlice.actions
+export const { getUsers, setUsers } = usersSlice.actions
+
+export const allUsers = () => {
+    return async dispatch => {
+        const users = await loginService.getUsers()
+        if (users) {
+            dispatch(setUsers(users))
+        }
+    }
+}
 
 export const initializeUser = () => {
     return async dispatch => {
@@ -47,4 +71,9 @@ export const logout = () => {
     }
 }
 
-export default userSlice.reducer
+const rootReducer = combineReducers({
+    user: userSlice.reducer,
+    users: usersSlice.reducer
+})
+
+export default rootReducer

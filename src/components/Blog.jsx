@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import blogService from '../services/blogs'
 import { useDispatch, useSelector } from 'react-redux'
 import { like, removeBlog } from '../reducers/blogReducer'
+import { Link } from 'react-router-dom'
+import { Table } from 'react-bootstrap'
 
 const Blog = ({ blog, currentUser }) => {
     const [details, setDetails] = useState(false)
@@ -10,10 +12,9 @@ const Blog = ({ blog, currentUser }) => {
     const likes = updatedBlog ? updatedBlog.likes : blog.likes
 
 
-    /*useEffect(() => {
-      console.log('Current user: ', currentUser)
+    useEffect(() => {
       console.log('blog: ', blog)
-  }, [])*/
+  }, [])
 
     function handleLikeIncrease() {
         dispatch(like(blog.id))
@@ -25,11 +26,11 @@ const Blog = ({ blog, currentUser }) => {
 
     return (
         <div className="blog">
-            {blog.title}{' '}
+            <Link to={`/blogs/${blog.id}`} state={{id: blog.id, title: blog.title, author: blog.author, likes: blog.likes, username: blog.user.username, comments: blog.comments}}>{blog.title}</Link>{' '}
             {details && blog.author} {details && ' '}
             {details && (likes ? likes : 0)}{details && ' likes'}
-            {(currentUser.username === blog.user.username) && details && <button onClick={handleDelete}>Delete</button>}
-            <button onClick={() => setDetails(!details)}>{details ? 'Hide' : 'View'}</button>
+            {(currentUser.username === blog.user.username) && details && <button style={{marginLeft: '5px'}} onClick={handleDelete}>Delete</button>}
+            <button style={{marginInline: '5px'}} onClick={() => setDetails(!details)}>{details ? 'Hide' : 'View'}</button>
             <button onClick={handleLikeIncrease}>Like</button>
         </div>
     )

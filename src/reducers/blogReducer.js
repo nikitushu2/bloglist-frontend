@@ -13,6 +13,13 @@ const blogSlice = createSlice({
                     : blog
             )
         },
+        updateComment(state, action) {
+            return state.map(blog =>
+                blog.id === action.payload.id
+                    ? action.payload // New object
+                    : blog
+            )
+        },
         append(state, action) {
             state.push(action.payload)
         },
@@ -26,7 +33,7 @@ const blogSlice = createSlice({
 })
 
 
-export const { append, set, updateLike, remove } = blogSlice.actions
+export const { append, set, updateLike, updateComment, remove } = blogSlice.actions
 
 export const initializeBlogs = () => {
     return async dispatch => {
@@ -46,16 +53,38 @@ export const create = (title, author) => {
 export const like = id => {
     return (dispatch, getState) => {
         const state = getState()
-        const blogToLike = state.blogs.find(blog => blog.id === id)
 
-        console.log('blogToLike: ', blogToLike)
+        console.log('state in like: ', state)
+
+        const blogToLike = state.blogs.find(blog => blog.id === id)
 
         const updatedBlog = { ...blogToLike, likes: blogToLike.likes + 1 }
 
         blogService.update(updatedBlog.id, updatedBlog).then(() => {
             dispatch(updateLike(updatedBlog))
             dispatch(initializeBlogs())
-            console.log('Updated blogs state:', getState().blogs)
+        })
+
+
+    }
+}
+
+export const comment = (id, comment) => {
+    return (dispatch, getState) => {
+        const state = getState()
+
+        //console.log('state in comment: ', state)
+
+        const blogToComment = state.blogs.find(blog => blog.id === id)
+
+        const updatedBlog = { ...blogToComment, comments: [...blogToComment.comments, comment] }
+
+        console.log('updatedBlog: ', updatedBlog)
+
+        blogService.update(updatedBlog.id, updatedBlog).then(() => {
+            dispatch(updateComment(updatedBlog))
+            //dispatch(initializeBlogs())
+            //console.log('Updated blogs state:', getState().blogs)
         })
 
 
